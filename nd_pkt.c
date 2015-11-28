@@ -52,7 +52,8 @@ static int
 verify_pkt(ndpkt_t *p, int len)
 {
 	ndmin_t *m;
-	uint32_t blkno = ntohl(p->np_blkno);
+	long blkno = ntohl(p->np_blkno);
+	long bcount = ntohl(p->np_bcount);
 
 	if (ntohl(p->np_bcount) > ND_MAXIO) {
 		log_msg(3, "bcount is too big: %lu.",
@@ -75,6 +76,9 @@ verify_pkt(ndpkt_t *p, int len)
 		    p->np_min, (unsigned long) blkno);
 		return (EIO);
 	}
+
+	if (blkno == GET_SIZE_REQ && bcount != sizeof (uint32_t))
+		return (EINVAL);
 
 	return (0);
 }
@@ -143,14 +147,19 @@ serve_read(ndd_t *nds, ndpkt_t *p, int err)
 
 	if (blkno == GET_SIZE_REQ) {
 		/* The client wants to know the size of this disk */
-		uint32_t disk_size = htonl(get_minor_size(p->np_min));
-		assert(bcount == sizeof (uint32_t));
-		memcpy(&p->np_data, &disk_size, bcount);
-		p->np_op |= ND_OP_DONE;
-		p->np_caddr = 0;
-		p->np_ccount = htonl(bcount);
-		log_msg(8, "nd%d: get size request - has %d blks",
-		    p->np_min, get_minor_size(p->np_min));
+		if (err == 0) {
+			uint32_t disk_size = htonl(get_minor_size(p->np_min));
+
+			assert(bcount == sizeof (uint32_t));
+			memcpy(&p->np_data, &disk_size, bcount);
+			p->np_op |= ND_OP_DONE;
+			p->np_caddr = 0;
+			p->np_ccount = htonl(bcount);
+			log_msg(8, "nd%d: get size request - has %d blks",
+			    p->np_min, get_minor_size(p->np_min));
+		} else {
+			log_msg(4, "nd%d: get size request failed", p->np_min);
+		}
 		return (send_packet(nds, p, ND_HDRSZ + bcount, err));
 	}
 

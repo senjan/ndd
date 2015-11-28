@@ -36,12 +36,16 @@ get_minor(int mn)
 }
 
 /*
- * Return the disk size in blocks (512 bytes)
+ * Return the disk size in blocks (512 bytes).
+ * Size of non-existing disk is 0.
  */
 uint32_t
 get_minor_size(int mn)
 {
-	return ((get_minor(mn)->size) / 512);
+	ndmin_t *m;
+
+	m = get_minor(mn);
+	return (m != NULL ? m->size / 512 : 0);
 }
 
 /*
