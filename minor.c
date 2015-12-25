@@ -84,8 +84,8 @@ open_minor(int n, char *name, int m)
 	minor->mode = m;
 	minor->ack = NULL;
 	nd_minors[n] = minor;
-	log_msg(2, "nd%d is %s. %lluB %s", n, name,
-	    (unsigned long long) st.st_size, (m != WR) ? "(RO)" : "");
+	log_msg(2, "nd%d is %s, %llu blocks %s", n, name,
+	    (unsigned long long ) st.st_size / 512, (m != WR) ? "(RO)" : "");
 
 	return (0);
 }
@@ -120,7 +120,7 @@ load_config(const char *cf, ndd_t *nds)
 		if ((fn = iniparser_getstring(ini, key, NULL)) == NULL)
 			continue;
 		(void) sprintf(key, "nd%d:mode", m);
-		if ((mods =  iniparser_getstring(ini, key, NULL)) == NULL)
+		if ((mods =  iniparser_getstring(ini, key, WR_STR)) == NULL)
 			continue;
 		if (strcmp(mods, RDONLY_STR) == 0) {
 			mode = RDONLY;
