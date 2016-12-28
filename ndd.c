@@ -136,7 +136,7 @@ create_lock(ndd_t *ndd)
 		(void) lseek(ndd->lf_fd, 0, SEEK_SET);
 		log_msg(0, "Updating pid only: %d", ndd->lf_fd);
 	}
-	(void) snprintf(pid_str, sizeof (pid_str), "%d\n", getpid());
+	(void) snprintf(pid_str, sizeof (pid_str), "%ld\n", getpid());
 	pid_len = strlen(pid_str);
 
 	if (write(ndd->lf_fd, pid_str, pid_len) != pid_len) {
@@ -232,7 +232,7 @@ main(int argc, char **argv)
 
 	/* Load the config file. */
 	if (load_config(conf_file, &nds) != 0) {
-		(void) fprintf(stderr, "Unable to load config.\n");
+		(void) fprintf(stderr, "Unable to load configuration.\n");
 		exit(1);
 	}
 

@@ -52,7 +52,7 @@ get_minor_size(int mn)
  * Initialize given 'softstate'.
  */
 static int
-open_minor(int n, char *name, int m)
+open_minor(int n, const char *name, int m)
 {
 	struct stat st;
 	mode_t mode = O_RDONLY;
@@ -101,10 +101,8 @@ load_config(const char *cf, ndd_t *nds)
 	int m;
 
 	ini = iniparser_load(cf ? cf : INI_FILE);
-	if (ini == NULL) {
-		(void) fprintf(stderr, "Unable to open ini file.\n");
+	if (ini == NULL)
 		return (ENOENT);
-	}
 
 	nds->log_level = (short) iniparser_getint(ini, "general:log_level", 0);
 	nds->simple_ack = (short) iniparser_getboolean(ini,
@@ -112,7 +110,7 @@ load_config(const char *cf, ndd_t *nds)
 
 	for (m = 0; m < MAX_MINOR; m++) {
 		char key[100];
-		char *fn, *mods;
+		const char *fn, *mods;
 		int mode;
 
 		nd_minors[m] = NULL;
