@@ -1,0 +1,16 @@
+install.sh:
+Run this script to create and run a SMF service called svc:/site/ndd:default
+which manages an ndd instance.
+
+remove.sh:
+This script removes svc:/site/ndd:default from your system.
+
+These are properties used by the service and their default values:
+# svccfg -s svc:/site/ndd:default
+svc:/site/ndd:default> listprop ndd
+ndd              application
+ndd/binary_path astring     /usr/local/bin
+ndd/config_file astring     /usr/local/etc/ndd.ini
+ndd/lock_file   astring     /var/spool/locks/ndd.lock
+
+Tested on Solaris 11.3.

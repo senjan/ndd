@@ -1,0 +1,42 @@
+<?xml version="1.0" ?>
+<!DOCTYPE service_bundle
+  SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<!--
+    Manifest created by svcbundle (2016-Jun-01 21:20:00+0200)
+-->
+<service_bundle type="manifest" name="site/ndd">
+    <service version="1" type="service" name="site/ndd">
+        <dependency restart_on="none" type="service"
+            name="multi_user_dependency" grouping="require_all">
+            <service_fmri value="svc:/milestone/multi-user"/>
+        </dependency>
+        <exec_method timeout_seconds="60" type="method" name="start"
+            exec="/lib/svc/method/svc-ndd %m"/>
+        <exec_method timeout_seconds="60" type="method" name="stop"
+            exec=":kill"/>
+        <exec_method timeout_seconds="60" type="method" name="refresh"
+            exec=":true"/>
+        <instance enabled="true" name="default">
+	    <property_group name="ndd" type="application">
+	        <propval name="config_file" type="astring"
+	            value="/usr/local/etc/ndd.ini" />
+	        <propval name="lock_file" type="astring"
+	            value="/var/spool/locks/ndd.lock" />
+	        <propval name="binary_path" type="astring"
+	            value="/usr/local/bin" />
+	    </property_group>
+	</instance>
+        <template>
+            <common_name>
+                <loctext xml:lang="C">
+		    ndd
+                </loctext>
+            </common_name>
+            <description>
+                <loctext xml:lang="C">
+		    Network Disk Daemon
+                </loctext>
+            </description>
+        </template>
+    </service>
+</service_bundle>

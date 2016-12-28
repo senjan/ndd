@@ -1,0 +1,58 @@
+#!/usr/sbin/sh
+
+. /lib/svc/share/smf_include.sh
+
+getproparg() {
+	val=`svcprop -p $1 $SMF_FMRI`
+	[ -n "$val" ] && echo $val
+}
+
+if [ -z $SMF_FMRI ];
+then
+	echo "SMF framework variables are not initialized."
+	exit $SMF_EXIT_ERR
+fi
+
+# Read SMF properties
+CONFIG_FILE=`getproparg ndd/config_file`
+BIN_PATH=`getproparg ndd/binary_path`
+LOCK_FILE=`getproparg ndd/lock_file`
+
+if [ -z CONFIG_FILE ];
+then
+	echo "ndd/config_file property is not set"
+	exit $SMF_EXIT_ERR_CONFIG
+fi
+
+if [ -z BIN_PATH ];
+then
+	echo "ndd/binary_path property is not set"
+	exit $SMF_EXIT_ERR_CONFIG
+fi
+
+if [ -z LOCK_FILE ];
+then
+	echo "ndd/lock_file property is not set"
+	exit $SMF_EXIT_ERR_CONFIG
+fi
+
+# We might need this to find libiniparser
+LD_LIBRARY_PATH=${BIN_PATH}/../lib
+export LD_LIBRARY_PATH
+
+case "$1" in
+'start')
+	echo "Starting..."
+	${BIN_PATH}/ndd -c ${CONFIG_FILE}
+        ;;
+
+'stop')
+	echo "Stopping..."
+	cat ${LOCK_FILE} 
+        ;;
+
+*)
+        echo "Usage: $0 { start | stop }"
+        ;;
+esac
+exit $SMF_EXIT_OK
