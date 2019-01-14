@@ -21,7 +21,7 @@
 	        <propval name="config_file" type="astring"
 	            value="/usr/local/etc/ndd.ini" />
 	        <propval name="lock_file" type="astring"
-	            value="/var/spool/locks/ndd.lock" />
+	            value="/usr/local/locks/ndd.lock" />
 	        <propval name="binary_path" type="astring"
 	            value="/usr/local/bin" />
 	    </property_group>

@@ -24,7 +24,7 @@ void log_msg(int level, const char *fmt, ...);
 #define	MAX_LOG_LEN	100
 
 #ifdef __sun
-#define	DEFAULT_LOCK_FILE	"/var/spool/locks/ndd.lock"
+#define	DEFAULT_LOCK_FILE	"/tmp/ndd.lock"
 #else
 #define	DEFAULT_LOCK_FILE	"/var/lock/ndd.lock"
 #endif
