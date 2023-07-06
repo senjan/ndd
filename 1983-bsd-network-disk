@@ -1,0 +1,282 @@
+In the CSRG ISO there is a backup tape, 4.1c.1 that comes from 1983
+when SunOS was first being developed.  All of the following is from
+that except for one man page which is from 4.1c.2.
+
+Files checked out of SCCS:
+
+$ grep -ri 'network.*disk' 4.1c.1 | grep -Fv s.
+4.1c.1/sys/net/netisr.h:#define	NETISR_ND	7		/* network disk protocol */
+4.1c.1/sys/netinet/in_proto.c: * Network disk protocol: runs on top of IP
+4.1c.1/sys/netinet/ip_input.c:	 * if we're acting as a network disk server.
+4.1c.1/sys/sys/vm_swp.c:/* network disk brain damage */
+
+SCCS files:
+
+$ grep -ri 'network.*disk' 4.1c.1 | grep -F s.
+4.1c.1/sys/conf/SCCS/s.files:c network disk must be defined so make works
+4.1c.1/sys/net/SCCS/s.netisr.h:#define	NETISR_ND	7		/* network disk protocol */
+4.1c.1/sys/netinet/SCCS/s.ip_input.c:c hack for network disk stuff
+4.1c.1/sys/netinet/SCCS/s.ip_input.c:	 * if we're acting as a network disk server.
+4.1c.1/sys/netinet/SCCS/s.in_proto.c: * Network disk protocol: runs on top of IP
+4.1c.1/sys/netinet/SCCS/s.in.h:c network disk protocol
+4.1c.1/sys/netinet/SCCS/s.in.h:c add unofficial network disk protocol number
+4.1c.1/sys/sys/SCCS/s.vm_swp.c:c brain damage for network disk
+4.1c.1/sys/sys/SCCS/s.vm_swp.c:/* network disk brain damage */
+
+
+
+commit 478cc2c33cc71f97e29bb0965fd389cf9d6b8895
+Author: sam <sam@6d2a9bf9-008a-40cb-8eda-ccea7862c9b7>
+Date:   Fri Jan 21 03:58:04 1983 +0000
+
+    4.1c.1/sys/conf/files 1.6
+    network disk must be defined so make works
+
+$ git diff 514ada39e89400540308c37a2e2178880d7b6a72 478cc2c33cc71f97e29bb0965fd389cf9d6b8895 conf/files
+diff --git a/conf/files b/conf/files
+index 31260e68..c0705601 100644
+--- a/conf/files
++++ b/conf/files
+@@ -72,6 +72,7 @@ sys/ufs_efs.c         optional efs device-driver
+ sys/ufs_fio.c          standard
+ sys/ufs_inode.c                standard
+ sys/ufs_nami.c         standard
++sys/ufs_nd.c           optional nd device-driver
+ sys/ufs_subr.c         standard
+ sys/ufs_syscalls.c     standard
+ sys/ufs_tables.c       standard
+
+
+commit 31ba9c24879b8c4b4975d67c6e0b3bd9950e6743
+Author: sam <sam@6d2a9bf9-008a-40cb-8eda-ccea7862c9b7>
+Date:   Tue Jan 18 00:06:52 1983 +0000
+
+    4.1c.1/sys/netinet/ip_input.c 1.62
+    hack for network disk stuff
+
+$ git diff de28f0609e726a1c11a497f5e57a71a91c3cdec4 31ba9c24879b8c4b4975d67c6e0b3bd9950e6743 netinet/ip_input.c
+diff --git a/netinet/ip_input.c b/netinet/ip_input.c
+index fe813c6b..968db633 100644
+--- a/netinet/ip_input.c
++++ b/netinet/ip_input.c
+@@ -1,4 +1,4 @@
+-/*     ip_input.c      1.61    83/01/04        */
++/*     ip_input.c      1.62    83/01/17        */
+ 
+ #include "../h/param.h"
+ #include "../h/systm.h"
+@@ -149,6 +149,20 @@ next:
+                    sin->sin_addr.s_addr == ip->ip_dst.s_addr)
+                        goto ours;
+        }
++/* BEGIN GROT */
++#include "nd.h"
++#if NND > 0
++       /*
++        * Diskless machines don't initially know
++        * their address, so take packets from them
++        * if we're acting as a network disk server.
++        */
++       if (ip->ip_dst.s_addr == INADDR_ANY &&
++           (in_netof(ip->ip_src) == INADDR_ANY &&
++            in_lnaof(ip->ip_src) != INADDR_ANY))
++               goto ours;
++#endif
++/* END GROT */
+        ipaddr.sin_addr = ip->ip_dst;
+        if (if_ifwithaddr((struct sockaddr *)&
+
+
+croft is probably Bill Croft (Stanford University)
+https://elists.isoc.org/pipermail/internet-history/2023-February/008686.html
+
+> Bill Croft built a simple block-level storage sharing protocol (nd,
+> network disk) that ran over UDP.
+
+commit 2024fbf3f24c5b3cebb338479bf3fe210c2627e8
+Author: sam <sam@6d2a9bf9-008a-40cb-8eda-ccea7862c9b7>
+Date:   Tue Jan 18 00:01:59 1983 +0000
+
+    4.1c.1/sys/netinet/in_proto.c 5.4
+    add croft's stuff
+
+$ git diff fb9a74475611b0e3c9c69d664738d5a7447ae759 2024fbf3f24c5b3cebb338479bf3fe210c2627e8 netinet/in_proto.c
+diff --git a/netinet/in_proto.c b/netinet/in_proto.c
+index 591d2288..d3be34be 100644
+--- a/netinet/in_proto.c
++++ b/netinet/in_proto.c
+@@ -1,4 +1,4 @@
+-/*     in_proto.c      5.3     82/11/03        */
++/*     in_proto.c      5.4     83/01/17        */
+ 
+ #include "../h/param.h"
+ #include "../h/socket.h"
+@@ -32,6 +32,13 @@ extern       int raw_usrreq();
+ #if NIMP > 0
+ int    rimp_output(), hostslowtimo();
+ #endif
++/*
++ * Network disk protocol: runs on top of IP
++ */
++#include "nd.h"
++#if NND > 0
++int    nd_input(), nd_slowtimo(), nd_init();
++#endif
+ 
+ struct protosw inetsw[] = {
+ { 0,           PF_INET,        0,              0,
+@@ -59,6 +66,13 @@ struct protosw inetsw[] = {
+   raw_usrreq,
+   0,           0,              0,              0,
+ },
++#if NND > 0
++{ 0,           PF_INET,        IPPROTO_ND,     0,
++  nd_input,    0,              0,              0,
++  0,
++  nd_init,     0,              nd_slowtimo,    0,
++},
++#endif
+ };
+
+
+commit f0b3678672d480e9336a385e513867ffb0a0cdd9
+Author: sam <sam@6d2a9bf9-008a-40cb-8eda-ccea7862c9b7>
+Date:   Tue Jan 18 02:11:07 1983 +0000
+
+    4.1c.1/sys/sys/vm_swp.c 4.38
+    brain damage for network disk
+
+--- a/sys/vm_swp.c
++++ b/sys/vm_swp.c
+@@ -1,4 +1,4 @@
+-/*     vm_swp.c        4.37    82/12/17        */
++/*     vm_swp.c        4.38    83/01/17        */
+ 
+ #include "../machine/pte.h"
+ 
+@@ -213,7 +213,7 @@ nextiov:
+                uio->uio_resid -= c;
+                uio->uio_offset += c;
+                /* temp kludge for tape drives */
+-               if (bp->b_resid || bp->b_flags&B_ERROR)
++               if (bp->b_resid || (bp->b_flags&B_ERROR))
+                        break;
+        }
+        bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
+@@ -226,12 +226,20 @@ nextiov:
+        goto nextiov;
+ }
+ 
++#define        MAXPHYS (63 * 1024)
++
++/* network disk brain damage */
++#include "nd.h"
++#if NND > 0
++#define        MAXPHYS (32 * 1024)
++#endif
++
+ unsigned
+ minphys(bp)
+        struct buf *bp;
+ {
+ 
+-       if (bp->b_bcount > 63 * 1024)
+-               bp->b_bcount = 63 * 1024;
++       if (bp->b_bcount > MAXPHYS)
++               bp->b_bcount = MAXPHYS;
+ }
+
+commit e24c89e6099eeebd539b4fddae385247544c2f6b
+Author: sam <sam@6d2a9bf9-008a-40cb-8eda-ccea7862c9b7>
+Date:   Tue Jan 18 03:06:43 1983 +0000
+
+    4.1c.1/sys/netinet/in.h 4.20
+    network disk protocol
+
+--- a/netinet/in.h
++++ b/netinet/in.h
+@@ -1,4 +1,4 @@
+-/*     in.h    4.19    82/12/17        */
++/*     in.h    4.20    83/01/17        */
+ 
+ /*
+  * Constants and structures defined by the internet system,
+@@ -13,6 +13,7 @@
+ #define        IPPROTO_TCP             6               /* tcp */
+ #define        IPPROTO_PUP             12              /* pup */
+ #define        IPPROTO_UDP             17              /* user datagram protocol */
++#define        IPPROTO_ND              77              /* UNOFFICIAL net disk proto */
+ 
+ #define        IPPROTO_RAW             255             /* raw IP packet */
+ #define        IPPROTO_MAX             256
+
+
+4.1c.2/usr/man/man4/intro.4n
+
+INTRO(4N)                                                            INTRO(4N)
+
+NAME
+       net - introduction to networking facilities
+
+SYNOPSIS
+       #include <sys/socket.h>
+       #include <net/route.h>
+
+DESCRIPTION
+       This  section  briefly describes the networking facilities available on
+       the system.  Documentation in this part of section 4 is broken up  into
+       three areas: protocol-families, protocols, and network interfaces.  En‐
+       tries describing a protocol-family are marked ``4F'', protocol  entries
+       ``4P'',  and  network  interfaces  ``4V'' (for VAX specific devices) or
+       ``4S'' (for Sun specific entries).
+
+Another bit of SunOS in 4.1c* BSD, the only Sun-specific manual page:
+
+4.1c.2/usr/man/man4/nd.4s
+
+nd.4s contains:
+
+PROTOCOL AND DRIVER INTERNALS
+       The  protocol  packet  is defined in /usr/include/sys/nd.h and also in‐
+       cluded below:
+
+       /*
+        * "nd" protocol packet format.
+        */
+       struct ndpack {
+            struct ip np_ip;    /* ip header, proto IPPROTO_ND */
+            u_char    np_op;         /* operation code, see below */
+            u_char    np_min;        /* minor device */
+            char np_error; /* b_error */
+            char np_xxx;        /* unused */
+            long np_seq;        /* sequence number */
+            long np_blkno; /* b_blkno, disk block number */
+            long np_bcount;     /* b_bcount, byte count */
+            long np_resid; /* b_resid, residual byte count */
+            long np_caddr; /* current byte offset of this packet */
+            long np_ccount;     /* current byte count of this packet */
+       };                  /* data follows */
+
+       /* np_op operation codes. */
+       #define   NDOPREAD  1    /* read */
+       #define   NDOPWRITE 2    /* write */
+       #define   NDOPERROR 3    /* error */
+       #define   NDOPCODE  7    /* op code mask */
+       #define   NDOPWAIT  010  /* waiting for DONE or next request */
+       #define   NDOPDONE  020  /* operation done */
+
+       /* misc protocol defines. */
+       #define   NDMAXDATA 1024 /* max data per packet (if 1370, would
+                              allow 4K disk block to fit in 3 ether
+                              packets;  but would mess up clusters) */
+       #define   NDMAXPACKS     6    /* max packets before acknowledgement */
+       #define   NDMAXIO        32*1024   /* max np_bcount */
+
+       #define   NDXTIMER  4    /* seconds between rexmits */
+
+By SunOS-3.4 (prabably earlier too) sys/nd.h bacame sys/sun/ndio.h
+and network disk was relegated to stand-alone.
+
+sun/sys/sunstand/nd.c
+sun/sys/sun/ndio.h
+
